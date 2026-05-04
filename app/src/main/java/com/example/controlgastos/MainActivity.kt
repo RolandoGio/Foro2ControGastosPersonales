@@ -5,21 +5,34 @@ import android.util.Patterns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,9 +44,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.controlgastos.ui.theme.AeroAqua
+import com.example.controlgastos.ui.theme.AeroGlow
+import com.example.controlgastos.ui.theme.AeroMint
+import com.example.controlgastos.ui.theme.AeroSky
+import com.example.controlgastos.ui.theme.AeroWater
 import com.example.controlgastos.ui.theme.ControlGastosPersonalesTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -76,7 +99,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    containerColor = Color.Transparent
                 ) { innerPadding ->
                     if (userEmail == null) {
                         AuthScreen(
@@ -151,6 +175,187 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+fun AeroBackground(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFEAFBFF),
+                        Color(0xFFCFF7F2),
+                        Color(0xFFF8FDFF)
+                    )
+                )
+            )
+    ) {
+        Box(
+            modifier = Modifier
+                .size(220.dp)
+                .offset(x = (-64).dp, y = 44.dp)
+                .clip(CircleShape)
+                .background(AeroSky.copy(alpha = 0.28f))
+                .border(1.dp, Color.White.copy(alpha = 0.55f), CircleShape)
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(180.dp)
+                .offset(x = 56.dp, y = 96.dp)
+                .clip(CircleShape)
+                .background(AeroGlow.copy(alpha = 0.36f))
+                .border(1.dp, Color.White.copy(alpha = 0.7f), CircleShape)
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(260.dp)
+                .offset(x = 96.dp, y = 70.dp)
+                .clip(CircleShape)
+                .background(AeroAqua.copy(alpha = 0.22f))
+                .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+        )
+
+        content()
+    }
+}
+
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f))
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.52f),
+                            Color.White.copy(alpha = 0.12f)
+                        )
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun PrimaryAeroButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(52.dp),
+        enabled = enabled,
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AeroWater,
+            contentColor = Color.White,
+            disabledContainerColor = AeroWater.copy(alpha = 0.42f),
+            disabledContentColor = Color.White.copy(alpha = 0.72f)
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 5.dp,
+            pressedElevation = 1.dp,
+            disabledElevation = 0.dp
+        )
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+@Composable
+fun ExpenseTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation = VisualTransformation.None
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(18.dp),
+        visualTransformation = visualTransformation,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = AeroWater,
+            unfocusedBorderColor = AeroSky.copy(alpha = 0.58f),
+            focusedContainerColor = Color.White.copy(alpha = 0.62f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.46f),
+            cursorColor = AeroWater,
+            focusedLabelColor = AeroWater
+        )
+    )
+}
+
+@Composable
+fun ScreenHeader(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    centered: Boolean = true
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun MessageText(message: String, success: Boolean = false) {
+    if (message.isNotBlank()) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = message,
+            color = if (success) AeroWater else MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
 fun AuthScreen(
     modifier: Modifier = Modifier,
     auth: FirebaseAuth,
@@ -221,92 +426,68 @@ fun AuthScreen(
             }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth()
+    AeroBackground(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Control de Gastos",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Inicia sesión o crea una cuenta",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Correo electrónico") },
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ScreenHeader(
+                        title = "Control de Gastos",
+                        subtitle = "Inicia sesión o crea una cuenta"
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    ExpenseTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = "Correo electrónico",
                         keyboardType = KeyboardType.Email
                     )
-                )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Contraseña") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = { loginUser() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading
-                ) {
-                    Text("Iniciar sesión")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                TextButton(
-                    onClick = { registerUser() },
-                    enabled = !isLoading
-                ) {
-                    Text("Crear cuenta")
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (isLoading) {
-                    CircularProgressIndicator()
-                }
-
-                if (message.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error
+
+                    ExpenseTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = "Contraseña",
+                        keyboardType = KeyboardType.Password,
+                        visualTransformation = PasswordVisualTransformation()
                     )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    PrimaryAeroButton(
+                        text = "Iniciar sesión",
+                        onClick = { loginUser() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = { registerUser() },
+                        enabled = !isLoading
+                    ) {
+                        Text("Crear cuenta")
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (isLoading) {
+                        CircularProgressIndicator(color = AeroWater)
+                    }
+
+                    MessageText(message = message)
                 }
             }
         }
@@ -322,65 +503,63 @@ fun HomeScreen(
     onViewSummary: () -> Unit,
     onLogout: () -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Bienvenido",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = email,
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Desde esta pantalla puedes registrar, consultar y resumir tus gastos personales."
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onAddExpense,
-            modifier = Modifier.fillMaxWidth()
+    AeroBackground(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Agregar gasto")
-        }
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ScreenHeader(
+                        title = "Bienvenido",
+                        subtitle = email
+                    )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-        Button(
-            onClick = onViewHistory,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Ver historial")
-        }
+                    Text(
+                        text = "Registra, consulta y resume tus gastos personales desde un espacio simple y claro.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = onViewSummary,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Ver resumen mensual")
-        }
+                    PrimaryAeroButton(
+                        text = "Agregar gasto",
+                        onClick = onAddExpense,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
-            onClick = onLogout,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Cerrar sesión")
+                    PrimaryAeroButton(
+                        text = "Ver historial",
+                        onClick = onViewHistory,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    PrimaryAeroButton(
+                        text = "Ver resumen mensual",
+                        onClick = onViewSummary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(onClick = onLogout) {
+                        Text("Cerrar sesión")
+                    }
+                }
+            }
         }
     }
 }
@@ -486,104 +665,84 @@ fun AddExpenseScreen(
             }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth()
+    AeroBackground(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Registrar gasto",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nombre del gasto") },
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ScreenHeader(
+                        title = "Registrar gasto",
+                        subtitle = "Guarda nombre, monto, categoría y fecha"
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Monto") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
+                    ExpenseTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = "Nombre del gasto"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ExpenseTextField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = "Monto",
                         keyboardType = KeyboardType.Decimal
                     )
-                )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text("Categoría") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = date,
-                    onValueChange = { date = it },
-                    label = { Text("Fecha, ejemplo: 2026-05-04") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = { saveExpense() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading
-                ) {
-                    Text("Guardar gasto")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                TextButton(
-                    onClick = onBack,
-                    enabled = !isLoading
-                ) {
-                    Text("Volver")
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (isLoading) {
-                    CircularProgressIndicator()
-                }
-
-                if (message.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = message,
-                        color = if (message.contains("correctamente")) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        }
+
+                    ExpenseTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        label = "Categoría"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ExpenseTextField(
+                        value = date,
+                        onValueChange = { date = it },
+                        label = "Fecha, ejemplo: 2026-05-04"
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    PrimaryAeroButton(
+                        text = "Guardar gasto",
+                        onClick = { saveExpense() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = onBack,
+                        enabled = !isLoading
+                    ) {
+                        Text("Volver")
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (isLoading) {
+                        CircularProgressIndicator(color = AeroWater)
+                    }
+
+                    MessageText(
+                        message = message,
+                        success = message.contains("correctamente")
                     )
                 }
             }
@@ -639,70 +798,92 @@ fun HistoryScreen(
             }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Text(
-            text = "Historial de gastos",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Gastos registrados por el usuario autenticado.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isLoading) {
-            CircularProgressIndicator()
-        }
-
-        if (message.isNotBlank()) {
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.weight(1f)
+    AeroBackground(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
         ) {
-            items(expenses) { expense ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+            ScreenHeader(
+                title = "Historial de gastos",
+                subtitle = "Gastos registrados por el usuario autenticado.",
+                centered = false
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isLoading) {
+                CircularProgressIndicator(color = AeroWater)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (message.isNotBlank()) {
+                Text(
+                    text = message,
+                    color = if (expenses.isEmpty()) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f)
+            ) {
+                items(expenses) { expense ->
+                    GlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
                     ) {
-                        Text(
-                            text = expense.name,
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = expense.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "\$${String.format(Locale.getDefault(), "%.2f", expense.amount)}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = AeroWater,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
-                        Text(text = "Monto: \$${expense.amount}")
-                        Text(text = "Categoría: ${expense.category}")
-                        Text(text = "Fecha: ${expense.date}")
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = "Categoría: ${expense.category}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Fecha: ${expense.date}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Volver")
+            PrimaryAeroButton(
+                text = "Volver",
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -761,67 +942,86 @@ fun MonthlySummaryScreen(
             }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth()
+    AeroBackground(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Resumen mensual",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Mes: $month",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (isLoading) {
-                    CircularProgressIndicator()
-                } else {
-                    Text(
-                        text = "Total gastado: \$${String.format(Locale.getDefault(), "%.2f", total)}",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Cantidad de gastos: $expenseCount",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-
-                if (message.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth()
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Volver")
+                    ScreenHeader(
+                        title = "Resumen mensual",
+                        subtitle = "Mes: $month"
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    if (isLoading) {
+                        CircularProgressIndicator(color = AeroWater)
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            AeroWater.copy(alpha = 0.92f),
+                                            AeroAqua.copy(alpha = 0.86f),
+                                            AeroMint.copy(alpha = 0.88f)
+                                        )
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.65f),
+                                    shape = RoundedCornerShape(22.dp)
+                                )
+                                .padding(18.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Total gastado",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White.copy(alpha = 0.92f)
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    text = "\$${String.format(Locale.getDefault(), "%.2f", total)}",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "Cantidad de gastos: $expenseCount",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    MessageText(message = message)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    PrimaryAeroButton(
+                        text = "Volver",
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
