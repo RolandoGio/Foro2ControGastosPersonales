@@ -20,8 +20,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -485,6 +486,256 @@ fun CategoryOptionButton(
 }
 
 @Composable
+fun IntegratedAeroPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.White.copy(alpha = 0.46f))
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.76f),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .padding(18.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun LedgerSurface(
+    expenses: List<Expense>,
+    modifier: Modifier = Modifier
+) {
+    IntegratedAeroPanel(modifier = modifier) {
+        LazyColumn {
+            itemsIndexed(expenses) { index, expense ->
+                LedgerExpenseRow(expense = expense)
+
+                if (index < expenses.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(AeroSky.copy(alpha = 0.22f))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LedgerExpenseRow(expense: Expense) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = expense.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = expense.date,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                CategoryLabel(text = expense.category)
+            }
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Text(
+            text = "\$${String.format(Locale.getDefault(), "%.2f", expense.amount)}",
+            style = MaterialTheme.typography.headlineSmall,
+            color = AeroWater,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun CategoryLabel(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(AeroMint.copy(alpha = 0.34f))
+            .border(
+                width = 1.dp,
+                color = AeroAqua.copy(alpha = 0.34f),
+                shape = RoundedCornerShape(999.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text.ifBlank { "Sin categoría" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+fun EmptyLedgerState(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    IntegratedAeroPanel(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                AeroGlow.copy(alpha = 0.58f),
+                                AeroAqua.copy(alpha = 0.26f)
+                            )
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.72f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "$",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = AeroWater,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = message.ifBlank { "Todavía no hay gastos registrados." },
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Cuando agregues gastos, aparecerán aquí como un registro ordenado.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun MonthlyDashboard(
+    month: String,
+    total: Double,
+    expenseCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Mes actual",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Text(
+            text = month,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(30.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            AeroWater.copy(alpha = 0.96f),
+                            AeroAqua.copy(alpha = 0.88f),
+                            AeroMint.copy(alpha = 0.9f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.72f),
+                    shape = RoundedCornerShape(30.dp)
+                )
+                .padding(22.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Total mensual",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "\$${String.format(Locale.getDefault(), "%.2f", total)}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        IntegratedAeroPanel(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Movimientos",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = "Gastos registrados este mes",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Text(
+                    text = expenseCount.toString(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AeroWater,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun AuthScreen(
     modifier: Modifier = Modifier,
     auth: FirebaseAuth,
@@ -943,64 +1194,20 @@ fun HistoryScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            if (message.isNotBlank()) {
-                Text(
-                    text = message,
-                    color = if (expenses.isEmpty()) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
-                    style = MaterialTheme.typography.bodyMedium
+            if (!isLoading && expenses.isNotEmpty()) {
+                LedgerSurface(
+                    expenses = expenses,
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            LazyColumn(
-                modifier = Modifier.weight(1f)
-            ) {
-                items(expenses) { expense ->
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp)
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Text(
-                                    text = expense.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                Text(
-                                    text = "\$${String.format(Locale.getDefault(), "%.2f", expense.amount)}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = AeroWater,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = "Categoría: ${expense.category}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Fecha: ${expense.date}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+            } else if (!isLoading) {
+                EmptyLedgerState(
+                    message = message,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1076,79 +1283,40 @@ fun MonthlySummaryScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ScreenHeader(
-                        title = "Resumen mensual",
-                        subtitle = "Mes: $month"
-                    )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                ScreenHeader(
+                    title = "Resumen mensual",
+                    subtitle = "Vista limpia de tu actividad del mes",
+                    centered = false
+                )
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                    if (isLoading) {
-                        CircularProgressIndicator(color = AeroWater)
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            AeroWater.copy(alpha = 0.92f),
-                                            AeroAqua.copy(alpha = 0.86f),
-                                            AeroMint.copy(alpha = 0.88f)
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = Color.White.copy(alpha = 0.65f),
-                                    shape = RoundedCornerShape(22.dp)
-                                )
-                                .padding(18.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = "Total gastado",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.92f)
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = "\$${String.format(Locale.getDefault(), "%.2f", total)}",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = "Cantidad de gastos: $expenseCount",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    MessageText(message = message)
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    PrimaryAeroButton(
-                        text = "Volver",
-                        onClick = onBack,
-                        modifier = Modifier.fillMaxWidth()
+                if (isLoading) {
+                    CircularProgressIndicator(color = AeroWater)
+                } else {
+                    MonthlyDashboard(
+                        month = month,
+                        total = total,
+                        expenseCount = expenseCount
                     )
                 }
+
+                MessageText(
+                    message = message,
+                    success = !isLoading && expenseCount == 0
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                PrimaryAeroButton(
+                    text = "Volver",
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
