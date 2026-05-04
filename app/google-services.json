@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "236492278781",
+    "project_id": "controlgastospersonales-cc518",
+    "storage_bucket": "controlgastospersonales-cc518.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:236492278781:android:8e61a07a6fe00763a9e794",
+        "android_client_info": {
+          "package_name": "com.example.controlgastos"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "236492278781-mo054rvl6l71qu5eunaqjdcsciak1d3i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.controlgastos",
+            "certificate_hash": "e3fdf04a0206619af918965c0cca22982a7a1576"
+          }
+        },
+        {
+          "client_id": "236492278781-b0jmr6nb05oiv4mkbfhfo4mc6kk1frem.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALYkAAFYXnx_6k2FfP-eLS5nv1p8XxSsg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "236492278781-b0jmr6nb05oiv4mkbfhfo4mc6kk1frem.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
