@@ -356,6 +356,135 @@ fun MessageText(message: String, success: Boolean = false) {
 }
 
 @Composable
+fun MoneyTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            AeroAqua.copy(alpha = 0.94f),
+                            AeroWater.copy(alpha = 0.9f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(18.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.size(10.dp))
+
+        ExpenseTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = "Monto",
+            keyboardType = KeyboardType.Decimal,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun CategorySelector(
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val categories = listOf(
+        "Comida",
+        "Transporte",
+        "Estudio",
+        "Servicios",
+        "Salud",
+        "Entretenimiento",
+        "Otros"
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Categoría",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        categories.chunked(2).forEach { rowCategories ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowCategories.forEach { category ->
+                    CategoryOptionButton(
+                        text = category,
+                        selected = selectedCategory == category,
+                        onClick = { onCategorySelected(category) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                if (rowCategories.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+fun CategoryOptionButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) AeroWater else Color.White.copy(alpha = 0.56f),
+            contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = if (selected) 4.dp else 0.dp,
+            pressedElevation = 1.dp
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (selected) Color.White.copy(alpha = 0.74f) else AeroSky.copy(alpha = 0.45f)
+        )
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+@Composable
 fun AuthScreen(
     modifier: Modifier = Modifier,
     auth: FirebaseAuth,
@@ -693,19 +822,16 @@ fun AddExpenseScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    ExpenseTextField(
+                    MoneyTextField(
                         value = amount,
-                        onValueChange = { amount = it },
-                        label = "Monto",
-                        keyboardType = KeyboardType.Decimal
+                        onValueChange = { amount = it }
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    ExpenseTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = "Categoría"
+                    CategorySelector(
+                        selectedCategory = category,
+                        onCategorySelected = { category = it }
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
