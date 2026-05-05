@@ -1687,6 +1687,22 @@ fun HistoryScreen(
 
     val currentUser = auth.currentUser
 
+    fun getCurrentMonth(): String {
+        val formatter = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+        return formatter.format(Date())
+    }
+
+    var selectedMonth by remember { mutableStateOf(getCurrentMonth()) }
+
+    fun shiftMonth(monthText: String, offset: Int): String {
+        val formatter = SimpleDateFormat("yyyy-MM", Locale.US)
+        val dateValue = formatter.parse(monthText) ?: Date()
+        val calendar = java.util.Calendar.getInstance()
+        calendar.time = dateValue
+        calendar.add(java.util.Calendar.MONTH, offset)
+        return formatter.format(calendar.time)
+    }
+
     fun getMonthFromDate(dateText: String): String {
         return if (dateText.length >= 7) {
             dateText.substring(0, 7)
@@ -1712,7 +1728,7 @@ fun HistoryScreen(
         db.collection("users")
             .document(currentUser.uid)
             .collection("expenses")
-            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .whereEqualTo("month", selectedMonth)
             .get()
             .addOnSuccessListener { result ->
                 expenses = result.documents.map { document ->
@@ -1724,12 +1740,14 @@ fun HistoryScreen(
                         date = document.getString("date") ?: "",
                         month = document.getString("month") ?: ""
                     )
+                }.sortedByDescending { expense ->
+                    expense.date
                 }
 
                 isLoading = false
 
                 if (expenses.isEmpty() && message.isBlank()) {
-                    message = "No hay gastos registrados."
+                    message = "No hay gastos registrados para este mes."
                     messageIsSuccess = false
                 }
             }
@@ -1868,7 +1886,7 @@ fun HistoryScreen(
             }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(selectedMonth) {
         loadExpenses()
     }
 
@@ -1884,7 +1902,22 @@ fun HistoryScreen(
                 centered = false
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            MonthNavigator(
+                selectedMonth = selectedMonth,
+                onPreviousMonth = {
+                    selectedMonth = shiftMonth(selectedMonth, -1)
+                },
+                onNextMonth = {
+                    selectedMonth = shiftMonth(selectedMonth, 1)
+                },
+                onCurrentMonth = {
+                    selectedMonth = getCurrentMonth()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (isLoading) {
                 CircularProgressIndicator(color = AeroWater)
