@@ -34,12 +34,16 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,6 +84,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
+import java.util.TimeZone
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -522,6 +527,85 @@ fun CategoryOptionButton(
             text = text,
             style = MaterialTheme.typography.labelLarge
         )
+    }
+}
+
+@Composable
+fun DateSelector(
+    date: String,
+    onChooseDate: () -> Unit,
+    onUseCurrentDate: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Fecha",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.5f))
+                .border(
+                    width = 1.dp,
+                    color = AeroSky.copy(alpha = 0.48f),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .padding(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (date.isBlank()) "Selecciona una fecha" else date,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (date.isBlank()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Formato guardado: yyyy-MM-dd",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                TextButton(
+                    onClick = onChooseDate,
+                    enabled = enabled
+                ) {
+                    Text("Elegir fecha")
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = onUseCurrentDate,
+                enabled = enabled
+            ) {
+                Text("Usar fecha actual")
+            }
+        }
     }
 }
 
@@ -1141,6 +1225,7 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExpenseScreen(
     modifier: Modifier = Modifier,
@@ -1154,6 +1239,8 @@ fun AddExpenseScreen(
     var date by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
 
     fun validateExpense(): Boolean {
         val amountValue = amount.toDoubleOrNull()
@@ -1202,6 +1289,12 @@ fun AddExpenseScreen(
     fun getCurrentDate(): String {
         val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         return formatter.format(Date())
+    }
+
+    fun formatDateFromMillis(millis: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        formatter.timeZone = TimeZone.getTimeZone("UTC")
+        return formatter.format(Date(millis))
     }
 
     fun saveExpense() {
@@ -1289,23 +1382,12 @@ fun AddExpenseScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    ExpenseTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        label = "Fecha, ejemplo: 2026-05-04"
+                    DateSelector(
+                        date = date,
+                        onChooseDate = { showDatePicker = true },
+                        onUseCurrentDate = { date = getCurrentDate() },
+                        enabled = !isLoading
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(
-                            onClick = { date = getCurrentDate() },
-                            enabled = !isLoading
-                        ) {
-                            Text("Usar fecha actual")
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -1337,6 +1419,31 @@ fun AddExpenseScreen(
                     )
                 }
             }
+        }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selectedDate ->
+                            date = formatDateFromMillis(selectedDate)
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
