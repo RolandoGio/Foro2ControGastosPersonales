@@ -36,6 +36,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -90,6 +91,7 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 
 data class Expense(
+    val id: String = "",
     val name: String = "",
     val amount: Double = 0.0,
     val category: String = "",
@@ -632,12 +634,16 @@ fun IntegratedAeroPanel(
 @Composable
 fun LedgerSurface(
     expenses: List<Expense>,
+    onDeleteExpense: (Expense) -> Unit,
     modifier: Modifier = Modifier
 ) {
     IntegratedAeroPanel(modifier = modifier) {
         LazyColumn {
             itemsIndexed(expenses) { index, expense ->
-                LedgerExpenseRow(expense = expense)
+                LedgerExpenseRow(
+                    expense = expense,
+                    onDeleteExpense = { onDeleteExpense(expense) }
+                )
 
                 if (index < expenses.lastIndex) {
                     Box(
@@ -653,7 +659,10 @@ fun LedgerSurface(
 }
 
 @Composable
-fun LedgerExpenseRow(expense: Expense) {
+fun LedgerExpenseRow(
+    expense: Expense,
+    onDeleteExpense: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -679,6 +688,12 @@ fun LedgerExpenseRow(expense: Expense) {
                 Spacer(modifier = Modifier.width(10.dp))
 
                 CategoryLabel(text = expense.category)
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            TextButton(onClick = onDeleteExpense) {
+                Text("Eliminar")
             }
         }
 
@@ -1499,16 +1514,24 @@ fun HistoryScreen(
 ) {
     var expenses by remember { mutableStateOf<List<Expense>>(emptyList()) }
     var message by remember { mutableStateOf("") }
+    var messageIsSuccess by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     val currentUser = auth.currentUser
 
-    LaunchedEffect(Unit) {
+    fun loadExpenses() {
         if (currentUser == null) {
             message = "No hay un usuario autenticado."
+            messageIsSuccess = false
             isLoading = false
-            return@LaunchedEffect
+            return
         }
+
+        isLoading = true
+        message = ""
+        messageIsSuccess = false
 
         db.collection("users")
             .document(currentUser.uid)
@@ -1518,6 +1541,7 @@ fun HistoryScreen(
             .addOnSuccessListener { result ->
                 expenses = result.documents.map { document ->
                     Expense(
+                        id = document.id,
                         name = document.getString("name") ?: "",
                         amount = document.getDouble("amount") ?: 0.0,
                         category = document.getString("category") ?: "",
@@ -1530,12 +1554,57 @@ fun HistoryScreen(
 
                 if (expenses.isEmpty()) {
                     message = "No hay gastos registrados."
+                    messageIsSuccess = false
                 }
             }
             .addOnFailureListener { exception ->
                 isLoading = false
                 message = exception.message ?: "No se pudo cargar el historial."
+                messageIsSuccess = false
             }
+    }
+
+    fun deleteExpense(expense: Expense) {
+        val user = currentUser
+
+        if (user == null) {
+            message = "No hay un usuario autenticado."
+            messageIsSuccess = false
+            return
+        }
+
+        if (expense.id.isBlank()) {
+            message = "No se pudo identificar el gasto seleccionado."
+            messageIsSuccess = false
+            return
+        }
+
+        isDeleting = true
+        message = ""
+        messageIsSuccess = false
+
+        db.collection("users")
+            .document(user.uid)
+            .collection("expenses")
+            .document(expense.id)
+            .delete()
+            .addOnSuccessListener {
+                isDeleting = false
+                expenseToDelete = null
+                message = "Gasto eliminado correctamente."
+                messageIsSuccess = true
+                loadExpenses()
+            }
+            .addOnFailureListener { exception ->
+                isDeleting = false
+                expenseToDelete = null
+                message = exception.message ?: "No se pudo eliminar el gasto."
+                messageIsSuccess = false
+            }
+    }
+
+    LaunchedEffect(Unit) {
+        loadExpenses()
     }
 
     AeroBackground(modifier = modifier) {
@@ -1557,9 +1626,15 @@ fun HistoryScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
+            MessageText(
+                message = message,
+                success = messageIsSuccess
+            )
+
             if (!isLoading && expenses.isNotEmpty()) {
                 LedgerSurface(
                     expenses = expenses,
+                    onDeleteExpense = { expenseToDelete = it },
                     modifier = Modifier.weight(1f)
                 )
             } else if (!isLoading) {
@@ -1581,6 +1656,38 @@ fun HistoryScreen(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+
+    expenseToDelete?.let { expense ->
+        AlertDialog(
+            onDismissRequest = {
+                if (!isDeleting) {
+                    expenseToDelete = null
+                }
+            },
+            title = {
+                Text("Eliminar gasto")
+            },
+            text = {
+                Text("¿Seguro que deseas eliminar este gasto?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { deleteExpense(expense) },
+                    enabled = !isDeleting
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { expenseToDelete = null },
+                    enabled = !isDeleting
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
