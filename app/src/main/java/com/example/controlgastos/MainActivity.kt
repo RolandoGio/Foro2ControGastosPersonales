@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -29,6 +30,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -477,22 +479,33 @@ fun CategorySelector(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        categories.chunked(2).forEach { rowCategories ->
+        listOf(
+            listOf("Comida", "Transporte"),
+            listOf("Estudio", "Servicios"),
+            listOf("Salud", "Otros"),
+            listOf("Entretenimiento")
+        ).forEach { rowCategories ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                rowCategories.forEach { category ->
+                if (rowCategories.size == 1) {
+                    val category = rowCategories.first()
                     CategoryOptionButton(
                         text = category,
                         selected = selectedCategory == category,
                         onClick = { onCategorySelected(category) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
-                }
-
-                if (rowCategories.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+                } else {
+                    rowCategories.forEach { category ->
+                        CategoryOptionButton(
+                            text = category,
+                            selected = selectedCategory == category,
+                            onClick = { onCategorySelected(category) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -634,6 +647,7 @@ fun IntegratedAeroPanel(
 @Composable
 fun LedgerSurface(
     expenses: List<Expense>,
+    onEditExpense: (Expense) -> Unit,
     onDeleteExpense: (Expense) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -642,6 +656,7 @@ fun LedgerSurface(
             itemsIndexed(expenses) { index, expense ->
                 LedgerExpenseRow(
                     expense = expense,
+                    onEditExpense = { onEditExpense(expense) },
                     onDeleteExpense = { onDeleteExpense(expense) }
                 )
 
@@ -661,6 +676,7 @@ fun LedgerSurface(
 @Composable
 fun LedgerExpenseRow(
     expense: Expense,
+    onEditExpense: () -> Unit,
     onDeleteExpense: () -> Unit
 ) {
     Row(
@@ -692,8 +708,14 @@ fun LedgerExpenseRow(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            TextButton(onClick = onDeleteExpense) {
-                Text("Eliminar")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onEditExpense) {
+                    Text("Editar")
+                }
+
+                TextButton(onClick = onDeleteExpense) {
+                    Text("Eliminar")
+                }
             }
         }
 
@@ -777,6 +799,148 @@ fun EmptyLedgerState(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditExpenseDialog(
+    expense: Expense,
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String) -> Unit
+) {
+    var editedName by remember(expense.id) { mutableStateOf(expense.name) }
+    var editedAmount by remember(expense.id) {
+        mutableStateOf(String.format(Locale.US, "%.2f", expense.amount))
+    }
+    var editedCategory by remember(expense.id) { mutableStateOf(expense.category) }
+    var editedDate by remember(expense.id) { mutableStateOf(expense.date) }
+    var editMessage by remember(expense.id) { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    fun getCurrentDate(): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return formatter.format(Date())
+    }
+
+    fun formatDateFromMillis(millis: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        formatter.timeZone = TimeZone.getTimeZone("UTC")
+        return formatter.format(Date(millis))
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isSaving) {
+                onDismiss()
+            }
+        },
+        title = {
+            Text("Editar gasto")
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(430.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                MessageText(message = editMessage)
+
+                ExpenseTextField(
+                    value = editedName,
+                    onValueChange = { editedName = it },
+                    label = "Nombre del gasto"
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                MoneyTextField(
+                    value = editedAmount,
+                    onValueChange = { editedAmount = it }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                CategorySelector(
+                    selectedCategory = editedCategory,
+                    onCategorySelected = { editedCategory = it }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                DateSelector(
+                    date = editedDate,
+                    onChooseDate = { showDatePicker = true },
+                    onUseCurrentDate = { editedDate = getCurrentDate() },
+                    enabled = !isSaving
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val amountValue = editedAmount.toDoubleOrNull()
+
+                    editMessage = when {
+                        editedName.isBlank() -> "El nombre del gasto no puede estar vacío."
+                        editedAmount.isBlank() -> "El monto no puede estar vacío."
+                        amountValue == null -> "El monto debe ser numérico."
+                        amountValue <= 0.0 -> "El monto debe ser mayor que cero."
+                        editedCategory.isBlank() -> "La categoría no puede estar vacía."
+                        editedDate.isBlank() -> "La fecha no puede estar vacía."
+                        else -> ""
+                    }
+
+                    if (editMessage.isBlank()) {
+                        onSave(
+                            editedName,
+                            editedAmount,
+                            editedCategory,
+                            editedDate
+                        )
+                    }
+                },
+                enabled = !isSaving
+            ) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isSaving
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selectedDate ->
+                            editedDate = formatDateFromMillis(selectedDate)
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
@@ -1516,12 +1680,22 @@ fun HistoryScreen(
     var message by remember { mutableStateOf("") }
     var messageIsSuccess by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
+    var isUpdating by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
 
     val currentUser = auth.currentUser
 
-    fun loadExpenses() {
+    fun getMonthFromDate(dateText: String): String {
+        return if (dateText.length >= 7) {
+            dateText.substring(0, 7)
+        } else {
+            "sin_mes"
+        }
+    }
+
+    fun loadExpenses(clearMessage: Boolean = true) {
         if (currentUser == null) {
             message = "No hay un usuario autenticado."
             messageIsSuccess = false
@@ -1530,8 +1704,10 @@ fun HistoryScreen(
         }
 
         isLoading = true
-        message = ""
-        messageIsSuccess = false
+        if (clearMessage) {
+            message = ""
+            messageIsSuccess = false
+        }
 
         db.collection("users")
             .document(currentUser.uid)
@@ -1552,7 +1728,7 @@ fun HistoryScreen(
 
                 isLoading = false
 
-                if (expenses.isEmpty()) {
+                if (expenses.isEmpty() && message.isBlank()) {
                     message = "No hay gastos registrados."
                     messageIsSuccess = false
                 }
@@ -1560,6 +1736,95 @@ fun HistoryScreen(
             .addOnFailureListener { exception ->
                 isLoading = false
                 message = exception.message ?: "No se pudo cargar el historial."
+                messageIsSuccess = false
+            }
+    }
+
+    fun updateExpense(
+        expense: Expense,
+        updatedName: String,
+        updatedAmount: String,
+        updatedCategory: String,
+        updatedDate: String
+    ) {
+        val user = currentUser
+        val amountValue = updatedAmount.toDoubleOrNull()
+
+        if (user == null) {
+            message = "No hay un usuario autenticado."
+            messageIsSuccess = false
+            return
+        }
+
+        if (expense.id.isBlank()) {
+            message = "No se pudo identificar el gasto seleccionado."
+            messageIsSuccess = false
+            return
+        }
+
+        if (updatedName.isBlank()) {
+            message = "El nombre del gasto no puede estar vacío."
+            messageIsSuccess = false
+            return
+        }
+
+        if (updatedAmount.isBlank()) {
+            message = "El monto no puede estar vacío."
+            messageIsSuccess = false
+            return
+        }
+
+        if (amountValue == null) {
+            message = "El monto debe ser numérico."
+            messageIsSuccess = false
+            return
+        }
+
+        if (amountValue <= 0.0) {
+            message = "El monto debe ser mayor que cero."
+            messageIsSuccess = false
+            return
+        }
+
+        if (updatedCategory.isBlank()) {
+            message = "La categoría no puede estar vacía."
+            messageIsSuccess = false
+            return
+        }
+
+        if (updatedDate.isBlank()) {
+            message = "La fecha no puede estar vacía."
+            messageIsSuccess = false
+            return
+        }
+
+        isUpdating = true
+        message = ""
+        messageIsSuccess = false
+
+        val updates = mapOf(
+            "name" to updatedName.trim(),
+            "amount" to amountValue,
+            "category" to updatedCategory.trim(),
+            "date" to updatedDate.trim(),
+            "month" to getMonthFromDate(updatedDate.trim())
+        )
+
+        db.collection("users")
+            .document(user.uid)
+            .collection("expenses")
+            .document(expense.id)
+            .update(updates)
+            .addOnSuccessListener {
+                isUpdating = false
+                expenseToEdit = null
+                message = "Gasto actualizado correctamente."
+                messageIsSuccess = true
+                loadExpenses(clearMessage = false)
+            }
+            .addOnFailureListener { exception ->
+                isUpdating = false
+                message = exception.message ?: "No se pudo actualizar el gasto."
                 messageIsSuccess = false
             }
     }
@@ -1593,7 +1858,7 @@ fun HistoryScreen(
                 expenseToDelete = null
                 message = "Gasto eliminado correctamente."
                 messageIsSuccess = true
-                loadExpenses()
+                loadExpenses(clearMessage = false)
             }
             .addOnFailureListener { exception ->
                 isDeleting = false
@@ -1634,6 +1899,7 @@ fun HistoryScreen(
             if (!isLoading && expenses.isNotEmpty()) {
                 LedgerSurface(
                     expenses = expenses,
+                    onEditExpense = { expenseToEdit = it },
                     onDeleteExpense = { expenseToDelete = it },
                     modifier = Modifier.weight(1f)
                 )
@@ -1686,6 +1952,27 @@ fun HistoryScreen(
                 ) {
                     Text("Cancelar")
                 }
+            }
+        )
+    }
+
+    expenseToEdit?.let { expense ->
+        EditExpenseDialog(
+            expense = expense,
+            isSaving = isUpdating,
+            onDismiss = {
+                if (!isUpdating) {
+                    expenseToEdit = null
+                }
+            },
+            onSave = { updatedName, updatedAmount, updatedCategory, updatedDate ->
+                updateExpense(
+                    expense = expense,
+                    updatedName = updatedName,
+                    updatedAmount = updatedAmount,
+                    updatedCategory = updatedCategory,
+                    updatedDate = updatedDate
+                )
             }
         )
     }
