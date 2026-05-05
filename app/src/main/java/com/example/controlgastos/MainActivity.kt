@@ -775,7 +775,7 @@ fun MonthlyDashboard(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Mes actual",
+            text = "Mes consultado",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -854,6 +854,48 @@ fun MonthlyDashboard(
                     color = AeroWater,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthNavigator(
+    selectedMonth: String,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onCurrentMonth: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        IntegratedAeroPanel(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(onClick = onPreviousMonth) {
+                    Text("Mes anterior")
+                }
+
+                Text(
+                    text = selectedMonth,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                TextButton(onClick = onNextMonth) {
+                    Text("Mes siguiente")
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(onClick = onCurrentMonth) {
+                Text("Mes actual")
             }
         }
     }
@@ -1550,7 +1592,6 @@ fun MonthlySummaryScreen(
     onBack: () -> Unit
 ) {
     var total by remember { mutableStateOf(0.0) }
-    var month by remember { mutableStateOf("") }
     var expenseCount by remember { mutableStateOf(0) }
     var message by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
@@ -1562,20 +1603,33 @@ fun MonthlySummaryScreen(
         return formatter.format(Date())
     }
 
-    LaunchedEffect(Unit) {
+    var selectedMonth by remember { mutableStateOf(getCurrentMonth()) }
+
+    fun shiftMonth(monthText: String, offset: Int): String {
+        val formatter = SimpleDateFormat("yyyy-MM", Locale.US)
+        val dateValue = formatter.parse(monthText) ?: Date()
+        val calendar = java.util.Calendar.getInstance()
+        calendar.time = dateValue
+        calendar.add(java.util.Calendar.MONTH, offset)
+        return formatter.format(calendar.time)
+    }
+
+    LaunchedEffect(selectedMonth) {
         if (currentUser == null) {
             message = "No hay un usuario autenticado."
             isLoading = false
             return@LaunchedEffect
         }
 
-        val currentMonth = getCurrentMonth()
-        month = currentMonth
+        isLoading = true
+        total = 0.0
+        expenseCount = 0
+        message = ""
 
         db.collection("users")
             .document(currentUser.uid)
             .collection("expenses")
-            .whereEqualTo("month", currentMonth)
+            .whereEqualTo("month", selectedMonth)
             .get()
             .addOnSuccessListener { result ->
                 val amounts = result.documents.mapNotNull { document ->
@@ -1614,13 +1668,28 @@ fun MonthlySummaryScreen(
                     centered = false
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(18.dp))
+
+                MonthNavigator(
+                    selectedMonth = selectedMonth,
+                    onPreviousMonth = {
+                        selectedMonth = shiftMonth(selectedMonth, -1)
+                    },
+                    onNextMonth = {
+                        selectedMonth = shiftMonth(selectedMonth, 1)
+                    },
+                    onCurrentMonth = {
+                        selectedMonth = getCurrentMonth()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 if (isLoading) {
                     CircularProgressIndicator(color = AeroWater)
                 } else {
                     MonthlyDashboard(
-                        month = month,
+                        month = selectedMonth,
                         total = total,
                         expenseCount = expenseCount
                     )
