@@ -1,6 +1,9 @@
 package com.example.controlgastos
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Patterns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,30 +45,44 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.controlgastos.ui.theme.AeroAqua
 import com.example.controlgastos.ui.theme.AeroGlow
 import com.example.controlgastos.ui.theme.AeroMint
 import com.example.controlgastos.ui.theme.AeroSky
 import com.example.controlgastos.ui.theme.AeroWater
 import com.example.controlgastos.ui.theme.ControlGastosPersonalesTheme
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 data class Expense(
     val name: String = "",
@@ -764,10 +781,13 @@ fun AuthScreen(
     auth: FirebaseAuth,
     onLoginSuccess: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var showAddGoogleAccountAction by remember { mutableStateOf(false) }
 
     fun validateFields(): Boolean {
         if (email.isBlank()) {
@@ -798,6 +818,7 @@ fun AuthScreen(
 
         isLoading = true
         message = ""
+        showAddGoogleAccountAction = false
 
         auth.signInWithEmailAndPassword(email.trim(), password)
             .addOnCompleteListener { task ->
@@ -816,6 +837,7 @@ fun AuthScreen(
 
         isLoading = true
         message = ""
+        showAddGoogleAccountAction = false
 
         auth.createUserWithEmailAndPassword(email.trim(), password)
             .addOnCompleteListener { task ->
@@ -827,6 +849,91 @@ fun AuthScreen(
                     message = task.exception?.message ?: "No se pudo registrar el usuario."
                 }
             }
+    }
+
+    fun firebaseAuthWithGoogle(idToken: String) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+                isLoading = false
+
+                if (task.isSuccessful) {
+                    onLoginSuccess(auth.currentUser?.email ?: "Cuenta de Google")
+                } else {
+                    message = task.exception?.message ?: "No se pudo iniciar sesión con Google."
+                }
+            }
+    }
+
+    fun handleGoogleCredential(credential: androidx.credentials.Credential) {
+        if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            try {
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                firebaseAuthWithGoogle(googleIdTokenCredential.idToken)
+            } catch (exception: GoogleIdTokenParsingException) {
+                isLoading = false
+                showAddGoogleAccountAction = false
+                message = "No se pudo leer la cuenta de Google. Inténtalo nuevamente."
+            }
+        } else {
+            isLoading = false
+            showAddGoogleAccountAction = false
+            message = "La credencial recibida no corresponde a una cuenta de Google."
+        }
+    }
+
+    fun openAddGoogleAccountSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_ADD_ACCOUNT).apply {
+                putExtra("account_types", arrayOf("com.google"))
+            }
+            context.startActivity(intent)
+        } catch (exception: ActivityNotFoundException) {
+            message = "No se pudo abrir la configuración de cuentas en este dispositivo."
+        }
+    }
+
+    fun signInWithGoogle() {
+        isLoading = true
+        message = ""
+        showAddGoogleAccountAction = false
+
+        coroutineScope.launch {
+            try {
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                val result = CredentialManager.create(context).getCredential(
+                    context = context,
+                    request = request
+                )
+
+                handleGoogleCredential(result.credential)
+            } catch (exception: GetCredentialCancellationException) {
+                isLoading = false
+                showAddGoogleAccountAction = false
+                message = "Inicio con Google cancelado."
+            } catch (exception: NoCredentialException) {
+                isLoading = false
+                showAddGoogleAccountAction = true
+                message = "No hay una cuenta de Google disponible en este dispositivo. Agrega una cuenta en el emulador o intenta con correo y contraseña."
+            } catch (exception: GetCredentialException) {
+                isLoading = false
+                showAddGoogleAccountAction = true
+                message = "No hay una cuenta de Google disponible en este dispositivo. Agrega una cuenta en el emulador o intenta con correo y contraseña."
+            } catch (exception: Exception) {
+                isLoading = false
+                showAddGoogleAccountAction = false
+                message = "Ocurrió un problema al iniciar sesión con Google."
+            }
+        }
     }
 
     AeroBackground(modifier = modifier) {
@@ -875,6 +982,29 @@ fun AuthScreen(
                         enabled = !isLoading
                     )
 
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = { signInWithGoogle() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        enabled = !isLoading,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White.copy(alpha = 0.72f),
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            disabledContainerColor = Color.White.copy(alpha = 0.36f),
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = BorderStroke(1.dp, AeroSky.copy(alpha = 0.48f))
+                    ) {
+                        Text(
+                            text = "Continuar con Google",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     TextButton(
@@ -891,6 +1021,16 @@ fun AuthScreen(
                     }
 
                     MessageText(message = message)
+
+                    if (showAddGoogleAccountAction) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = { openAddGoogleAccountSettings() },
+                            enabled = !isLoading
+                        ) {
+                            Text("Agregar cuenta de Google")
+                        }
+                    }
                 }
             }
         }
