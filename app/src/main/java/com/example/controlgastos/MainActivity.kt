@@ -348,11 +348,34 @@ fun ScreenHeader(
 fun MessageText(message: String, success: Boolean = false) {
     if (message.isNotBlank()) {
         Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = message,
-            color = if (success) AeroWater else MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    if (success) {
+                        AeroMint.copy(alpha = 0.32f)
+                    } else {
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
+                    }
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (success) {
+                        AeroAqua.copy(alpha = 0.42f)
+                    } else {
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.22f)
+                    },
+                    shape = RoundedCornerShape(18.dp)
+                )
+                .padding(horizontal = 14.dp, vertical = 11.dp)
+        ) {
+            Text(
+                text = message,
+                color = if (success) AeroWater else MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
 }
 
@@ -889,27 +912,58 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.Start
         ) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ScreenHeader(
-                        title = "Bienvenido",
-                        subtitle = email
+            Text(
+                text = "Control de Gastos",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Una vista clara para registrar movimientos y revisar tu mes.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            IntegratedAeroPanel(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Sesión activa",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = email,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(AeroSky.copy(alpha = 0.24f))
                     )
 
                     Spacer(modifier = Modifier.height(18.dp))
 
                     Text(
-                        text = "Registra, consulta y resume tus gastos personales desde un espacio simple y claro.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Acciones rápidas",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     PrimaryAeroButton(
                         text = "Agregar gasto",
@@ -917,28 +971,31 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    PrimaryAeroButton(
-                        text = "Ver historial",
-                        onClick = onViewHistory,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        PrimaryAeroButton(
+                            text = "Historial",
+                            onClick = onViewHistory,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    PrimaryAeroButton(
-                        text = "Ver resumen mensual",
-                        onClick = onViewSummary,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    TextButton(onClick = onLogout) {
-                        Text("Cerrar sesión")
+                        PrimaryAeroButton(
+                            text = "Resumen",
+                            onClick = onViewSummary,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            TextButton(onClick = onLogout) {
+                Text("Cerrar sesión")
             }
         }
     }
@@ -1000,6 +1057,11 @@ fun AddExpenseScreen(
         } else {
             "sin_mes"
         }
+    }
+
+    fun getCurrentDate(): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return formatter.format(Date())
     }
 
     fun saveExpense() {
@@ -1093,7 +1155,19 @@ fun AddExpenseScreen(
                         label = "Fecha, ejemplo: 2026-05-04"
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            onClick = { date = getCurrentDate() },
+                            enabled = !isLoading
+                        ) {
+                            Text("Usar fecha actual")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     PrimaryAeroButton(
                         text = "Guardar gasto",
