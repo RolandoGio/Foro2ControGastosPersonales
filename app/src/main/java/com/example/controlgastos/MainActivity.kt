@@ -177,6 +177,8 @@ class MainActivity : ComponentActivity() {
                                 HomeScreen(
                                     modifier = Modifier.padding(innerPadding),
                                     email = userEmail ?: "",
+                                    auth = auth,
+                                    db = db,
                                     onAddExpense = {
                                         currentScreen = "addExpense"
                                     },
@@ -1346,11 +1348,76 @@ fun AuthScreen(
 fun HomeScreen(
     modifier: Modifier = Modifier,
     email: String,
+    auth: FirebaseAuth,
+    db: FirebaseFirestore,
     onAddExpense: () -> Unit,
     onViewHistory: () -> Unit,
     onViewSummary: () -> Unit,
     onLogout: () -> Unit
 ) {
+    var monthlyTotal by remember { mutableStateOf(0.0) }
+    var monthlyCount by remember { mutableStateOf(0) }
+    var lastExpense by remember { mutableStateOf<Expense?>(null) }
+    var dashboardMessage by remember { mutableStateOf("") }
+    var isDashboardLoading by remember { mutableStateOf(true) }
+
+    val currentUser = auth.currentUser
+    val displayName = currentUser?.displayName
+        ?.takeIf { it.isNotBlank() }
+        ?: email.substringBefore("@").replaceFirstChar { char ->
+            if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+        }
+
+    fun getCurrentMonth(): String {
+        val formatter = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+        return formatter.format(Date())
+    }
+
+    LaunchedEffect(email) {
+        if (currentUser == null) {
+            dashboardMessage = "No hay un usuario autenticado."
+            isDashboardLoading = false
+            return@LaunchedEffect
+        }
+
+        isDashboardLoading = true
+        dashboardMessage = ""
+
+        db.collection("users")
+            .document(currentUser.uid)
+            .collection("expenses")
+            .whereEqualTo("month", getCurrentMonth())
+            .get()
+            .addOnSuccessListener { result ->
+                val currentMonthExpenses = result.documents.map { document ->
+                    Expense(
+                        id = document.id,
+                        name = document.getString("name") ?: "",
+                        amount = document.getDouble("amount") ?: 0.0,
+                        category = document.getString("category") ?: "",
+                        date = document.getString("date") ?: "",
+                        month = document.getString("month") ?: ""
+                    )
+                }.sortedByDescending { expense ->
+                    expense.date
+                }
+
+                monthlyTotal = currentMonthExpenses.sumOf { it.amount }
+                monthlyCount = currentMonthExpenses.size
+                lastExpense = currentMonthExpenses.firstOrNull()
+                dashboardMessage = if (currentMonthExpenses.isEmpty()) {
+                    "Aún no hay gastos este mes."
+                } else {
+                    ""
+                }
+                isDashboardLoading = false
+            }
+            .addOnFailureListener { exception ->
+                dashboardMessage = exception.message ?: "No se pudo cargar el dashboard."
+                isDashboardLoading = false
+            }
+    }
+
     AeroBackground(modifier = modifier) {
         Column(
             modifier = Modifier
@@ -1360,7 +1427,7 @@ fun HomeScreen(
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = "Control de Gastos",
+                text = "Hola, $displayName",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -1368,7 +1435,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Una vista clara para registrar movimientos y revisar tu mes.",
+                text = email,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1378,18 +1445,31 @@ fun HomeScreen(
             IntegratedAeroPanel(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Sesión activa",
+                        text = "Mes actual",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    Text(
-                        text = email,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    if (isDashboardLoading) {
+                        CircularProgressIndicator(color = AeroWater)
+                    } else {
+                        Text(
+                            text = "\$${String.format(Locale.getDefault(), "%.2f", monthlyTotal)}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = AeroWater,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "$monthlyCount movimientos registrados",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(18.dp))
 
@@ -1399,6 +1479,47 @@ fun HomeScreen(
                             .height(1.dp)
                             .background(AeroSky.copy(alpha = 0.24f))
                     )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = "Último movimiento",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (lastExpense != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = lastExpense?.name ?: "",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Text(
+                                    text = "${lastExpense?.date ?: ""} · ${lastExpense?.category ?: ""}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Text(
+                                text = "\$${String.format(Locale.getDefault(), "%.2f", lastExpense?.amount ?: 0.0)}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = AeroWater,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    MessageText(message = dashboardMessage, success = monthlyCount == 0)
 
                     Spacer(modifier = Modifier.height(18.dp))
 
